@@ -1,0 +1,67 @@
+Daily Reflection Journal | CSC 360: Computer Graphics
+
+Field	Details
+Entry Date	9th September 2026
+Session Date	3rd September 2026
+Session Topic	Session 9 – Group Projects Overview, ASCII Trees, Headless Systems, SSH, TDD and Thread Management
+1. Remembering
+
+This session was structured around group project discussions, with each group getting an overview of their assigned topic and some initial guidance. Groups 4 through 8 were covered.
+
+Group 4’s topic is ASCII trees. The key distinction discussed was between printing and drawing: printing an ASCII tree means using text characters to form a tree shape in the terminal output. Drawing means a graphical visualization using actual rendered shapes. Group 6’s topic is app user experience, covering the elements that make up a good boot screen: a logo, animations, sounds, and a version display. Group 8’s topic is thread management, which involves running multiple processes concurrently, tracking them, and coordinating between them.
+
+My group’s project is on trees and objects. The core features discussed were: a left side panel that displays the tree structure, an edit panel that opens when something in the left panel is clicked, save options for the user, and persistent memory so that the application remembers state across sessions by writing to disk.
+
+Beyond the project discussions, four additional concepts came up. First, a revisit to unit testing and integration testing in the context of CI/CD pipelines, and a discussion on TDD (Test Driven Development). Second, the idea that terminals and CLIs are more powerful than graphical interfaces in certain contexts. Third, the concept of a headless system: a computer or software setup that runs without a physical display, keyboard, or mouse, relying instead on a text-based terminal or remote connection. Fourth, how SSH keys enable connecting to remote servers and machines without a GUI tool like AnyDesk or TeamViewer.
+
+2. Understanding
+
+The printing vs drawing distinction for ASCII trees is correct, and it connects to a divide that goes deeper than just the output format. Printing is text-mode output: you use characters like |, /, \, and spaces to suggest a tree shape in a fixed-width font. The terminal renders characters, not pixels. Drawing is graphics-mode output: you use actual coordinates, lines, and shapes to visualize the tree structure. One uses the text rendering pipeline, the other uses the graphics rendering pipeline. Both can represent the same data structure, but they are completely different production methods. The pen-and-paper activity makes sense here because it forces you to visualize what you actually want the output to look like before committing to either approach.
+
+Terminals being more powerful than GUIs in certain contexts is a non-obvious point that is worth sitting with. A terminal is not a simplified interface for people who cannot handle a GUI. It is a more expressive interface for people who know what they want. You can compose commands, pipe outputs into other commands, script repetitive tasks, run things on a remote machine, and automate entire workflows. A GUI has to build a button for every action it wants to expose. A terminal does not have that constraint. The power is in the composability.
+
+Headless systems are where the terminal’s power becomes most obvious. A server running in a data center has no monitor, no keyboard, no mouse. It runs completely headlessly and is accessed entirely over a network connection via SSH. This is also why SSH is the right answer to the question from class. AnyDesk and TeamViewer work by rendering a remote GUI locally, which requires a GUI to be running on the remote machine. SSH connects directly to the shell, which works even on a headless system with no display at all.
+
+Unit testing and integration testing sit at different levels of the system. A unit test checks one method or class in isolation: given this input, does this function return the right output? An integration test checks whether multiple components work together correctly: when the left panel sends a click event to the edit panel, does the right data load? TDD flips the usual order. You write the test first, before the code exists. The test fails (obviously, the code is not there yet). Then you write the minimum code needed to make the test pass. Then you clean up (refactor). This cycle is called red-green-refactor, and its advantage is that your tests are never afterthoughts. They define what the code is supposed to do before a single line of production code is written.
+
+Thread management comes up in Group 8’s topic because real applications rarely do only one thing at a time. A graphics application might be rendering the canvas, listening for user input, saving a file in the background, and polling a server for updates, all simultaneously. Each of those is a thread. Threads share the same memory space in a process, which makes them fast but also dangerous: two threads writing to the same data at the same time produces unpredictable results. This is the fundamental challenge of concurrent programming, and it is why thread management is a topic that warrants a full project.
+
+3. Applying
+
+For my project specifically, the left panel, edit panel, and persistent memory map to concrete technical components. The left panel is essentially a tree view component: a JTree in Swing, which renders a tree data structure visually as a collapsible hierarchy. When a node in the JTree is clicked, a TreeSelectionListener fires (Event Listener Model, back from Session 1), and that listener loads the relevant data into the edit panel on the right. The edit panel is a form or a canvas, depending on what is being edited.
+
+Persistent memory, saving to disk, means serializing the application state to a file when the user saves and deserializing it back when the application loads. In Java, this can be done with object serialization (ObjectOutputStream and ObjectInputStream), or more cleanly with a JSON or XML format that is human-readable and version-tolerant. The user should not lose their work if they close and reopen the application, which means the save-on-disk step has to happen at the right moments: explicitly on user command, and ideally as an autosave in the background.
+
+For TDD applied to this project: before writing the save functionality, write a test that creates a tree object, saves it to disk, reloads it, and checks that the reloaded tree matches the original. That test fails first. Then write the save and load code until it passes. This is the right order for any feature that touches persistent state, because state bugs are among the hardest to catch after the fact.
+
+For the remote server question: the process is to generate an SSH key pair on the local machine (ssh-keygen, covered in Session 2), copy the public key to the remote server’s ~/.ssh/authorized_keys file (using ssh-copy-id or manually), and then connect with ssh username@server-ip. No GUI required, no AnyDesk, no TeamViewer. The server just needs the SSH daemon running and the firewall allowing port 22.
+
+4. Analyzing
+
+The ASCII tree vs graphical tree distinction for Group 4’s project is actually a design decision with real trade-offs. ASCII trees work everywhere a terminal works, including headless servers, remote SSH sessions, and environments where no graphics library is available. Graphical trees are more readable for complex hierarchies, support interaction (click to expand, drag to reorder), and can encode more visual information (colors, icons, line styles). ASCII is universal but limited. Graphical is richer but requires a display and a graphics runtime. For a course project, graphical is clearly the goal, but understanding the ASCII baseline helps clarify what the graphical version is adding.
+
+TDD vs writing tests after the code is the more interesting comparison here. Writing tests after produces tests that are biased toward the code you wrote, because you know how it works. They tend to miss edge cases the code does not handle because you never thought about those cases when writing the code. TDD forces you to think about the contract of a function before thinking about its implementation. The downside is that TDD is slower upfront and requires discipline, especially when the design is not yet clear. It works best for well-defined components with clear inputs and outputs. It is harder to apply to UI code or highly exploratory work.
+
+Thread management vs the event listener model is a comparison worth making. The event listener model from Session 1 is single-threaded: events are queued and processed one at a time on the Event Dispatch Thread (EDT) in Swing. This is simple and safe but means long-running operations on the EDT freeze the UI. Thread management is the solution: move heavy work (file I/O, network calls, intensive computation) off the EDT into a background thread, then post results back to the EDT when done. SwingWorker in Java is designed exactly for this pattern. Group 8’s project is essentially about making this pattern robust and general.
+
+5. Evaluating
+
+TDD is the right approach for my project’s save and load functionality specifically, even if not for everything. Persistent state is exactly the kind of feature where post-hoc testing misses subtle bugs: what happens when the file is partially written? What if the file format changes between versions? Writing tests that specify the expected behavior of save and load before touching the implementation forces those questions to be answered upfront, which is where they are cheapest to answer.
+
+The headless system concept and SSH are, in hindsight, connected to everything the course has done with tools since Session 2. The reason SSH was set up for git access, the reason TortoiseGit and Maven are the build tools, the reason markdown is used for reflections instead of Word documents: all of these choices work in a headless, terminal-accessible environment. The course toolchain is built to be portable to a server, not just a laptop.
+
+Group 6’s boot screen and UX topic might seem lightweight compared to the other projects but it is actually the most user-facing. An application can be technically excellent and feel bad to use. A boot screen with a logo and animation sets a tone. A version display tells the user what they have installed. These are not decorative: they are communication. The boot sequence is the first thing a user experiences and the last thing most developers think about. That asymmetry is worth correcting.
+
+6. Creating
+
+For my trees and objects project, I want to think about what the edit panel actually shows when a node is clicked. The naive version is a form with text fields matching the object’s properties. But a more interesting version is a mini canvas where the object’s visual representation can be directly manipulated: drag the node to a new position in the tree, resize it, change its color. The left panel stays as the structural navigation, but the right panel becomes an interactive property editor rather than a static form. This would connect the project back to the core graphics content of the course.
+
+One thing I also want to prototype: the autosave thread. A background thread that runs every 30 seconds, serializes the current application state, and writes to a temp file. On launch, if the temp file exists, the app offers to restore from the last autosave. This is the same pattern used by most professional applications (IDEs, document editors) and it requires exactly the thread management concepts from Group 8’s project. Building this would mean collaborating with Group 8’s ideas even outside the formal group structure.
+
+Key Takeaways
+
+Printing an ASCII tree uses text characters in a terminal. Drawing a tree uses the graphics rendering pipeline with actual shapes. They represent the same data through completely different production methods.
+A terminal is not a simplified GUI. It is a more expressive interface for composable, scriptable, automatable work. Headless systems make this concrete: a server with no display is accessed entirely through a terminal over SSH.
+SSH connects directly to a shell and works on any system running an SSH daemon, no display required. That is why it is the answer to accessing a remote machine without AnyDesk or TeamViewer.
+TDD writes the test before the code. Red-green-refactor. The test defines the contract; the code fulfills it. For persistent state like save-to-disk, this order catches design problems before they become runtime bugs.
+My project’s three moving parts: JTree for the left panel, TreeSelectionListener for the click event, and file serialization for persistent memory. The event listener model from Session 1 is already doing the coordination work.
